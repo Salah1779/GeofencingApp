@@ -25,7 +25,7 @@
     "expo-linear-gradient": "^14.0.2",
     "expo-linking": "~7.0.5",
     "expo-location": "~18.0.8",
-    "expo-notifications": "^0.29.14",
+    "expo-notifications": "~0.29.14",
     "expo-router": "~4.0.18",
     "expo-splash-screen": "~0.29.22",
     "expo-status-bar": "~2.0.1",
@@ -41,7 +41,8 @@
     "react-native-safe-area-context": "4.12.0",
     "react-native-screens": "~4.4.0",
     "react-native-web": "~0.19.13",
-    "simplify-js": "^1.2.4"
+    "simplify-js": "^1.2.4",
+    "expo-device": "~7.0.2"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

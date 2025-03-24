@@ -296,7 +296,7 @@ const handleLocationUpdate = (location: any) => {
           ? geometry
           : [...geometry, geometry[0]];
       const turfPolygon = polygon([closedGeometry]);
-     // console.log('Checking Polygon:', turfPolygon );
+      //console.log('Checking Polygon:', turfPolygon );
       const bool=booleanPointInPolygon(turfPoint, turfPolygon);
       console.log('Boolean:', bool);
       if (bool===true) {
@@ -307,7 +307,7 @@ const handleLocationUpdate = (location: any) => {
     }
   }
  
-  console.log("current Zone" , currentZone?.zoneId);
+  console.log("current Zone" , currentZone?.zoneId );
   if (newZone && (!currentZone || newZone.zoneId !== currentZone.zoneId)) {
     console.log('Entering Zone:', newZone.zoneId, newZone.type);
     sendNotification(`Entered ${newZone.type} zone`).catch(err => console.error(err));
