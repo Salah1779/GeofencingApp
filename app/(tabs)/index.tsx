@@ -20,6 +20,7 @@ import {
   SelectedTypesState,
   Point,
   SelectionMode,
+  BoundingBox,
 } from '@/utils/types';
 import useLocationPermission from '@/hooks/useLocationPermission';
 import useNotificationPermission from '@/hooks/useNotificationPermission';
@@ -27,7 +28,7 @@ import { getData } from '@/utils/AsyncStorage';
 import {getRiskLevel} from '@/utils/helpers';
 
 // API endpoints
-const IP_BACKEND = '192.168.11.101' ;
+const IP_BACKEND = '192.168.11.100' ;
 const BUILDINGS_API = `http://${IP_BACKEND}:8080/api/buildings`;
 const ROUTES_API = `http://${IP_BACKEND}:8081/api/routes`;
 const ZONES_API = `http://${IP_BACKEND}:8084/api/zones`;
@@ -85,15 +86,14 @@ useEffect(() => {
 useEffect(() => {
   const fetchData = async () => {
     try {
-      const [buildingsRes, routesRes, zonesRes, trafficRes] = await Promise.all([
-        axios.get(BUILDINGS_API),
+      const [ routesRes, zonesRes,] = await Promise.all([
+       
         axios.get(ROUTES_API),
         axios.get(ZONES_API),
-        axios.get(TRAFFIC_API),
+ 
       ]);
 
       const fetchedZones = zonesRes.data.processedZones;
-      console.log('fetched Zones first LoAD' ,JSON.stringify(fetchedZones[0]));
       setAllZones(fetchedZones);
      
     
@@ -104,30 +104,30 @@ useEffect(() => {
   fetchData();
 }, []);
 // Fetch risk data and update zones
-useEffect(() => {
-  const fetchRiskData = async () => {
-    // Ne rien faire si les zones ne sont pas chargées
-    if (!zones.length) return;
+// useEffect(() => {
+//   const fetchRiskData = async () => {
+//     // Ne rien faire si les zones ne sont pas chargées
+//     if (!zones.length) return;
 
-    try {
-      console.log('Length of Data sent' ,zonesRef.current.length );
-      console.log('first Zone before Risk calculation', JSON.stringify(zonesRef.current[0]));
-      const response = await axios.post(Zones_RISK, { zones: zonesRef.current });
-      const status = await getData('status') || 'pedestrian';
+//     try {
+//       console.log('Length of Data sent' ,zonesRef.current.length );
+//       console.log('first Zone before Risk calculation', JSON.stringify(zonesRef.current[0]));
+//       const response = await axios.post(Zones_RISK, { zones: zonesRef.current });
+//       const status = await getData('status') || 'pedestrian';
       
-       setZones(response.data.zones.map((zone: any) => ({
-        ...zone,
-        currentRisk: getRiskLevel(zone[`${status}`])
-      })));
-      console.log('first Zone after Risk calculation', response.data.zones[0]);
+//        setZones(response.data.zones.map((zone: any) => ({
+//         ...zone,
+//         currentRisk: getRiskLevel(zone[`${status}`])
+//       })));
+//       console.log('first Zone after Risk calculation', response.data.zones[0]);
 
-    } catch (error) {
-      console.error('Risk calculation error:', error);
-    }
-  };
+//     } catch (error) {
+//       console.error('Risk calculation error:', error);
+//     }
+//   };
 
-  fetchRiskData();
-}, [zones]); // Déclencher quand les zones changent
+//   fetchRiskData();
+// }, [zones]); // Déclencher quand les zones changent
 
 
   // Fetch API data on mount
@@ -158,17 +158,22 @@ useEffect(() => {
 // }, []); // Une seule initialisation
 
   // Build R-tree and filter nearby zones
+  
   useEffect(() => {
     rtree.current.clear();
     allZones.forEach((zone) => {
-      const bbox =zone.boundingBox || getBoundingBox(zone.geometry);
+      const bbox =getBoundingBox(zone.geometry);
+      
       rtree.current.insert({ ...bbox, zoneId: zone.zoneId });
     });
+    //console.log('RTree Built' , rtree.current);
 
     const currentLoc = isSimulationMode ? simulatedLocation : userLocation;
+    //console.log('Current Location:', currentLoc);
     if (currentLoc) {
       const nearbyZones = getNearbyZones(currentLoc, allZones);
       setZones(nearbyZones);
+     // console.log('Nearby Zones:', nearbyZones.length);
     } else {
       console.log('No current location available for filtering zones');
     }
@@ -201,13 +206,18 @@ useEffect(() => {
 
   // Compute bounding box for a zone
   const getBoundingBox = useCallback((geometry: any) => {
-    let minLon = Infinity,
-      minLat = Infinity,
-      maxLon = -Infinity,
-      maxLat = -Infinity;
+    let minLon = Infinity, minLat = Infinity, maxLon = -Infinity, maxLat = -Infinity;
     geometry.forEach((point: any) => {
-      const lon = point[0];
-      const lat = point[1];
+      let lon, lat;
+      if (Array.isArray(point)) {
+        // Assume [lon, lat]
+        lon = point[0];
+        lat = point[1];
+      } else {
+        // Assume object with properties
+        lon = point.lon;
+        lat = point.lat;
+      }
       if (lon === undefined || lat === undefined) return;
       minLon = Math.min(minLon, lon);
       minLat = Math.min(minLat, lat);
@@ -260,54 +270,57 @@ useEffect(() => {
     return { lat: latSum / count, lon: lonSum / count };
   };
 
-  // Handle location updates
-  const handleLocationUpdate = (location: any) => {
-    const now = Date.now();
-    if (now - lastCheckTime.current < checkInterval) return;
-    lastCheckTime.current = now;
 
-    const lon = location.coords?.longitude ?? location.lng;
-    const lat = location.coords?.latitude ?? location.lat;
-    const turfPoint = point([lon, lat]);
+const handleLocationUpdate = (location: any) => {
+  const now = Date.now();
+  if (now - lastCheckTime.current < checkInterval) return;
+  lastCheckTime.current = now;
 
-    const candidates = rtree.current.search({
-      minX: lon,
-      minY: lat,
-      maxX: lon,
-      maxY: lat,
-    });
+  const lon = location.coords?.longitude ?? location.lng;
+  const lat = location.coords?.latitude ?? location.lat;
+  const turfPoint = point([lon, lat]);
 
-    let newZone: Zone | null = null;
-    for (const candidate of candidates) {
-      const zone=zones.find((z) => z.zoneId === candidate.zoneId);
-      if (zone) {
-        const geometry = zone.geometry.map((p: any) => [p[0], p[1]]);
-        const closedGeometry =
-          geometry[0][0] === geometry[geometry.length - 1][0] &&
-          geometry[0][1] === geometry[geometry.length - 1][1]
-            ? geometry
-            : [...geometry, geometry[0]];
-        const turfPolygon = polygon([closedGeometry]);
-        if (booleanPointInPolygon(turfPoint, turfPolygon)) {
-          newZone = zone;
-          break;
-        }
+  
+  console.log("Candidates:", zones.length);
+  
+
+  let newZone: Zone | null = null;
+  for (const zone of zones) {
+    //const zone = zones.find((z) => z.zoneId === candidate.zoneId);
+    if (zone) {
+      // Conversion de la géométrie au format attendu par Turf (format [lat, lon] -> [lon, lat])
+      const geometry = zone.geometry.map((p: any) => [p[0], p[1]]);
+      const closedGeometry =
+        geometry[0][0] === geometry[geometry.length - 1][0] &&
+        geometry[0][1] === geometry[geometry.length - 1][1]
+          ? geometry
+          : [...geometry, geometry[0]];
+      const turfPolygon = polygon([closedGeometry]);
+     // console.log('Checking Polygon:', turfPolygon );
+      const bool=booleanPointInPolygon(turfPoint, turfPolygon);
+      console.log('Boolean:', bool);
+      if (bool===true) {
+        newZone = zone;
+        console.log('New Zone:', newZone.zoneId, newZone.type);
+        break;
       }
     }
+  }
+ 
+  console.log("current Zone" , currentZone?.zoneId);
+  if (newZone && (!currentZone || newZone.zoneId !== currentZone.zoneId)) {
+    console.log('Entering Zone:', newZone.zoneId, newZone.type);
+    sendNotification(`Entered ${newZone.type} zone`).catch(err => console.error(err));
+    setCurrentZone(newZone);
+  } else if (!newZone && currentZone) {
+    console.log('Exiting Zone:', currentZone.zoneId, currentZone.type);
+    sendNotification(`Exited ${currentZone.type} zone`).catch(err => console.error(err));
+    setCurrentZone(null);
+  }
 
-    if (newZone && (!currentZone || newZone.zoneId !== currentZone.zoneId)) {
-      console.log('Entering Zone:', newZone.zoneId, newZone.type);
-      sendNotification(`Entered ${newZone.type} zone`);
-      setCurrentZone(newZone);
-    } else if (!newZone && currentZone) {
-      console.log('Exiting Zone:', currentZone.zoneId, currentZone.type);
-      sendNotification(`Exited ${currentZone.type} zone`);
-      setCurrentZone(null);
-    }
-
-    const nearbyZones = getNearbyZones(location,allZones);
-    setZones(nearbyZones);
-  };
+  const nearbyZones = getNearbyZones(location, allZones);
+  setZones(nearbyZones);
+};
 
   const handleMapClick = (point: Point, mode: SelectionMode) => {
     if (isSimulationMode) {
@@ -360,40 +373,9 @@ useEffect(() => {
 
   return (
     <View style={styles.container}>
-      {/* <Sidebar
-        selected={selected}
-        selectedTypes={selectedTypes}
-        uniqueBuildingTypes={[...new Set(buildings.map((b) => b.type))]}
-        uniqueRouteTypes={[...new Set(routes.map((r) => r.type))]}
-        uniqueZoneTypes={[...new Set(zones.map((z) => z.type))]}
-        uniqueTrafficTypes={[...new Set(trafficLights.map((t) => t.type))]}
-        toggleCategory={(category) =>
-          setSelected((prev) => ({ ...prev, [category]: !prev[category] }))
-        }
-        toggleType={(category, type) =>
-          setSelectedTypes((prev) => ({
-            ...prev,
-            [category]: prev[category].includes(type)
-              ? prev[category].filter((t) => t !== type)
-              : [...prev[category], type],
-          }))
-        }
-        isOpen={false}
-        onToggle={() => {}}
-      /> */}
-       {/* <PathController
-        startPoint={userLocation}
-        endPoint={endPoint}
-        onSetSelectionMode={setSelectionMode}
-        onFindPath={findPath}
-        onResetPath={resetPath}
-        isLoading={isLoading}
-        errorMessage={errorMessage}
-        selectionMode={selectionMode}
-      />   */}
+     
       <View style={styles.content}>
         <MapComponent
-          buildings={buildings}
           routes={routes}
           zones={zones}
           trafficLights={trafficLights}

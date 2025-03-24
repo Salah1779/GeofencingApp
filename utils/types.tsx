@@ -24,7 +24,7 @@ export interface Building {
   export interface Zone {
     zoneId: string;
     type: string;
-    geometry: Array<{ [key: string]: number }>;
+    geometry:number[][] //Array<{lat: number, lon: number }>;
     currentRisk: 'low' | 'medium' | 'high';
     boundingBox : BoundingBox | null;
     car:number;

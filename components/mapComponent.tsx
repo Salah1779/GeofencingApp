@@ -45,13 +45,6 @@ const randomRiskValue = () : string=>{
 }
 
 
-
-// const getRandomRiskColor=() : string=>{
-//   const colors :string[] = [Colors.riskHighColor, Colors.riskMidColor, Colors.riskLowColor];
-//   const randomIndex = Math.floor(Math.random() * colors.length);
-//   return colors[randomIndex];
-// }
-// Extend MapComponentProps to include userLocation and visibleRegion
 interface ExtendedMapComponentProps extends MapComponentProps {
   userLocation: any | null;
   visibleRegion: Region | null;
@@ -172,10 +165,10 @@ const MapComponent: React.FC<ExtendedMapComponentProps> = ({
           <Polygon
             key={zone.zoneId}
             coordinates={zone.geometry.map((p) => ({
-              latitude: p[1],
-              longitude: p[0],
+              latitude: p[1],//p.lat
+              longitude: p[0],//p.lon
             }))}
-            strokeColor='blue'//{getRiskColor(randomRiskValue())}
+            strokeColor={getRiskColor(randomRiskValue())}
             fillColor={getRiskColor(randomRiskValue())}
             strokeWidth={0.5}
             zIndex={3}
