@@ -82,6 +82,34 @@ useEffect(() => {
   zonesRef.current = zones;
 }, [zones]);
 
+useEffect(() => {
+  const fetchData = async () => {
+    try {
+      const [buildingsRes, routesRes, zonesRes, trafficRes] = await Promise.all([
+        axios.get(BUILDINGS_API),
+        axios.get(ROUTES_API),
+        axios.get(ZONES_API),
+        axios.get(TRAFFIC_API),
+      ]);
+    //  setBuildings(buildingsRes.data.data);
+      //setRoutes(routesRes.data.processedRoutes);
+      const fetchedZones = zonesRes.data.processedZones;
+      console.log('fetched Zones first LoAD' ,JSON.stringify(fetchedZones[0]));
+      setAllZones(fetchedZones);
+     
+      // axios.post(Routes_Post, {
+      //   routes: routesRes.data.processedRoutes
+      // }).then((res) => {
+      //   console.log(res.data);
+      // }).catch((err) => {
+      //   console.log(err);
+      // });
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    }
+  };
+  fetchData();
+}, []);
 // Fetch risk data and update zones
 useEffect(() => {
   const fetchRiskData = async () => {
@@ -89,6 +117,8 @@ useEffect(() => {
     if (!zones.length) return;
 
     try {
+      console.log('Length of Data sent' ,zonesRef.current.length );
+      console.log('first Zone before Risk calculation', JSON.stringify(zonesRef.current[0]));
       const response = await axios.post(Zones_RISK, { zones: zonesRef.current });
       const status = await getData('status') || 'pedestrian';
       
@@ -96,6 +126,7 @@ useEffect(() => {
         ...zone,
         currentRisk: getRiskLevel(zone[`${status}`])
       })));
+      console.log('first Zone after Risk calculation', response.data.zones[0]);
 
     } catch (error) {
       console.error('Risk calculation error:', error);
@@ -107,70 +138,37 @@ useEffect(() => {
 
 
   // Fetch API data on mount
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [buildingsRes, routesRes, zonesRes, trafficRes] = await Promise.all([
-          axios.get(BUILDINGS_API),
-          axios.get(ROUTES_API),
-          axios.get(ZONES_API),
-          axios.get(TRAFFIC_API),
-        ]);
-      //  setBuildings(buildingsRes.data.data);
-        //setRoutes(routesRes.data.processedRoutes);
-        const fetchedZones = zonesRes.data.processedZones;
-        //console.log(fetchedZones[0]);
-        setAllZones(fetchedZones);
-        console.log('API Data Fetched:', {
-          buildings: buildingsRes.data.data.length,
-          routes: routesRes.data.processedRoutes.length,
-          zones: fetchedZones.length,
-          trafficLights: trafficRes.data.data.length,
-          
-        });
-        // axios.post(Routes_Post, {
-        //   routes: routesRes.data.processedRoutes
-        // }).then((res) => {
-        //   console.log(res.data);
-        // }).catch((err) => {
-        //   console.log(err);
-        // });
-      } catch (error) {
-        console.error('Error fetching data:', error);
-      }
-    };
-    fetchData();
-  }, []);
+ 
 
 //WebSocket pour les mises à jour en temps réel
-useEffect(() => {
-  const ws = new WebSocket(WEBSOCKET_URL);
+// useEffect(() => {
+//   const ws = new WebSocket(WEBSOCKET_URL);
 
-  ws.onmessage = async (event) => {
-    const message = JSON.parse(event.data);
-    if (message.type === 'zone_update') {
-      const status = await getData('status') || 'pedestrian';
+//   ws.onmessage = async (event) => {
+//     const message = JSON.parse(event.data);
+//     if (message.type === 'zone_update') {
+//       const status = await getData('status') || 'pedestrian';
 
-      setZones(prevZones => 
-        prevZones.map(z => 
-          z.zoneId === message.data.zoneId ? {
-            ...z,
-            ...message.data,
-            currentRisk: getRiskLevel(message.data[`${status}`])
-          } : z
-        )
-      );
-    }
-  };
+//       setZones(prevZones => 
+//         prevZones.map(z => 
+//           z.zoneId === message.data.zoneId ? {
+//             ...z,
+//             ...message.data,
+//             currentRisk: getRiskLevel(message.data[`${status}`])
+//           } : z
+//         )
+//       );
+//     }
+//   };
 
-  return () => ws.close();
-}, []); // Une seule initialisation
+//   return () => ws.close();
+// }, []); // Une seule initialisation
 
   // Build R-tree and filter nearby zones
   useEffect(() => {
     rtree.current.clear();
     allZones.forEach((zone) => {
-      const bbox =zone.bbox || getBoundingBox(zone.geometry);
+      const bbox =zone.boundingBox || getBoundingBox(zone.geometry);
       rtree.current.insert({ ...bbox, zoneId: zone.zoneId });
     });
 
@@ -334,38 +332,39 @@ useEffect(() => {
   }, [isSimulationMode]);
 
 //Find Path
-  const findPath = useCallback(async () => {
-    if (!userLocation || !endPoint) {
-      setErrorMessage('Please select both start and end points');
-      return;
-    }
-    setIsLoading(true);
-    setErrorMessage('');
-    try {
-      const response = await axios.post(ASTAR_API, {
-        start: { lat: userLocation?.coords.latitude, lng: userLocation?.coords.longitude },
-        end: endPoint,
-      });
-      if (response.data.error) {
-        setErrorMessage(response.data.error);
-        setPath([]);
-      } else {
-        setPath(response.data.path);
-      }
-    } catch (error) {
-      console.log('Error finding path:', error);
-      setErrorMessage('Failed to find path. Please try again.');
-      setPath([]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [ endPoint]);
+  // const findPath = useCallback(async () => {
+  //   if (!userLocation || !endPoint) {
+  //     setErrorMessage('Please select both start and end points');
+  //     return;
+  //   }
+  //   setIsLoading(true);
+  //   setErrorMessage('');
+  //   try {
+  //     const response = await axios.post(ASTAR_API, {
+  //       start: { lat: userLocation?.coords.latitude, lng: userLocation?.coords.longitude },
+  //       end: endPoint,
+  //     });
+  //     if (response.data.error) {
+  //       setErrorMessage(response.data.error);
+  //       setPath([]);
+  //     } else {
+  //       setPath(response.data.path);
+  //     }
+  //   } catch (error) {
+  //     console.log('Error finding path:', error);
+  //     setErrorMessage('Failed to find path. Please try again.');
+  //     setPath([]);
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // }, [ endPoint]);
 
-  const resetPath = () => {
-    setEndPoint(null);
-    setPath([]);
-    setSelectionMode('none');
-  };
+  // const resetPath = () => {
+  //   setEndPoint(null);
+  //   setPath([]);
+  //   setSelectionMode('none');
+  // };
+
   return (
     <View style={styles.container}>
       {/* <Sidebar
@@ -389,7 +388,7 @@ useEffect(() => {
         isOpen={false}
         onToggle={() => {}}
       /> */}
-       <PathController
+       {/* <PathController
         startPoint={userLocation}
         endPoint={endPoint}
         onSetSelectionMode={setSelectionMode}
@@ -398,7 +397,7 @@ useEffect(() => {
         isLoading={isLoading}
         errorMessage={errorMessage}
         selectionMode={selectionMode}
-      />  
+      />   */}
       <View style={styles.content}>
         <MapComponent
           buildings={buildings}

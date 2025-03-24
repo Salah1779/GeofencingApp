@@ -26,9 +26,12 @@ export interface Building {
     type: string;
     geometry: Array<{ [key: string]: number }>;
     currentRisk: 'low' | 'medium' | 'high';
-    bbox : BoundingBox | null;
+    boundingBox : BoundingBox | null;
     car:number;
     pedestrian:number;
+    buildings: Map<string, number>;
+    routes: Map<string, number>;
+    trafficLights: number ;
   }
   
   export interface BoundingBox {
