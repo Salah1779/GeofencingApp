@@ -7,9 +7,7 @@ import booleanPointInPolygon from '@turf/boolean-point-in-polygon';
 import { polygon, point } from '@turf/helpers';
 import * as Location from 'expo-location';
 import Colors from '@/constants/Colors';
-import Sidebar from '@/components/SideBar';
 import MapComponent from '@/components/mapComponent';
-import PathController from '@/components/PathController';
 import { configureNotifications, sendNotification } from '@/utils/notificationService';
 import {
   Building,
@@ -26,8 +24,9 @@ import useNotificationPermission from '@/hooks/useNotificationPermission';
 import { getData } from '@/utils/AsyncStorage';
 import {getRiskLevel} from '@/utils/helpers';
 
+
 // API endpoints
-const IP_BACKEND = '192.168.11.101' ;
+const IP_BACKEND = '192.168.11.100' ;
 const BUILDINGS_API = `http://${IP_BACKEND}:8080/api/buildings`;
 const ROUTES_API = `http://${IP_BACKEND}:8081/api/routes`;
 const ZONES_API = `http://${IP_BACKEND}:8084/api/zones`;
@@ -85,59 +84,51 @@ useEffect(() => {
 useEffect(() => {
   const fetchData = async () => {
     try {
-      const [buildingsRes, routesRes, zonesRes, trafficRes] = await Promise.all([
-        axios.get(BUILDINGS_API),
-        axios.get(ROUTES_API),
+      const [ zonesRes, trafficRes ] = await Promise.all([
         axios.get(ZONES_API),
         axios.get(TRAFFIC_API),
       ]);
-    //  setBuildings(buildingsRes.data.data);
-      //setRoutes(routesRes.data.processedRoutes);
-      const fetchedZones = zonesRes.data.processedZones;
-      console.log('fetched Zones first LoAD' ,JSON.stringify(fetchedZones[0]));
-      setAllZones(fetchedZones);
-     
-      // axios.post(Routes_Post, {
-      //   routes: routesRes.data.processedRoutes
-      // }).then((res) => {
-      //   console.log(res.data);
-      // }).catch((err) => {
-      //   console.log(err);
-      // });
-    } catch (error) {
-      console.error('Error fetching data:', error);
-    }
-  };
-  fetchData();
-}, []);
-// Fetch risk data and update zones
-useEffect(() => {
-  const fetchRiskData = async () => {
-    // Ne rien faire si les zones ne sont pas chargées
-    if (!zones.length) return;
-
-    try {
-      console.log('Length of Data sent' ,zonesRef.current.length );
-      console.log('first Zone before Risk calculation', JSON.stringify(zonesRef.current[0]));
-      const response = await axios.post(Zones_RISK, { zones: zonesRef.current });
-      const status = await getData('status') || 'pedestrian';
+  
       
-       setZones(response.data.zones.map((zone: any) => ({
-        ...zone,
-        currentRisk: getRiskLevel(zone[`${status}`])
-      })));
-      console.log('first Zone after Risk calculation', response.data.zones[0]);
-
+      const fetchedZones = zonesRes.data.processedZones;
+      console.log('fetched Zones first LOAD : ' + fetchedZones.length);
+      console.log(JSON.stringify(fetchedZones[0]));
+  
+      setAllZones(fetchedZones);
     } catch (error) {
-      console.error('Risk calculation error:', error);
+      console.error("Erreur lors du fetch:", error);
     }
   };
+  
+  fetchData();
+}, [simulatedLocation]);
+// Fetch risk data and update zones
+// useEffect(() => {
+//   const fetchRiskData = async () => {
+//     // Ne rien faire si les zones ne sont pas chargées
+//     if (!zones.length) return;
 
-  fetchRiskData();
-}, [zones]); // Déclencher quand les zones changent
+//     try {
+//       console.log('Length of Data sent' ,zonesRef.current.length );
+//       console.log('first Zone before Risk calculation', JSON.stringify(zonesRef.current[0]));
+//       const response = await axios.post(Zones_RISK, { zones: zonesRef.current });
+//       const status = await getData('status') || 'pedestrian';
+      
+//        setZones(response.data.zones.map((zone: any) => ({
+//         ...zone,
+//         currentRisk: getRiskLevel(zone[`${status}`])
+//       })));
+//       console.log('first Zone after Risk calculation', response.data.zones[0]);
+
+//     } catch (error) {
+//       console.error('Risk calculation error:', error);
+//     }
+//   };
+
+//   fetchRiskData();
+// }, [zones]); // Déclencher quand les zones changent
 
 
-  // Fetch API data on mount
  
 
 //WebSocket pour les mises à jour en temps réel
@@ -165,17 +156,21 @@ useEffect(() => {
 // }, []); // Une seule initialisation
 
   // Build R-tree and filter nearby zones
+  
   useEffect(() => {
     rtree.current.clear();
     allZones.forEach((zone) => {
-      const bbox =zone.boundingBox || getBoundingBox(zone.geometry);
+      const bbox = getBoundingBox(zone.geometry);
       rtree.current.insert({ ...bbox, zoneId: zone.zoneId });
     });
 
     const currentLoc = isSimulationMode ? simulatedLocation : userLocation;
+    console.log('Current Location:', currentLoc);
     if (currentLoc) {
       const nearbyZones = getNearbyZones(currentLoc, allZones);
       setZones(nearbyZones);
+      console.log('Nearby Zones Length:',zones.length); 
+      console.log('Nearby Zones:', nearbyZones[0]);
     } else {
       console.log('No current location available for filtering zones');
     }
@@ -221,7 +216,7 @@ useEffect(() => {
       maxLon = Math.max(maxLon, lon);
       maxLat = Math.max(maxLat, lat);
     });
-    return { minX: minLon, minY: minLat, maxX: maxLon, maxY: maxLat };
+    return {minLat , maxLat, minLon, maxLon};
   }, []);
 
   // Haversine formula for distance (in kilometers)
@@ -367,40 +362,8 @@ useEffect(() => {
 
   return (
     <View style={styles.container}>
-      {/* <Sidebar
-        selected={selected}
-        selectedTypes={selectedTypes}
-        uniqueBuildingTypes={[...new Set(buildings.map((b) => b.type))]}
-        uniqueRouteTypes={[...new Set(routes.map((r) => r.type))]}
-        uniqueZoneTypes={[...new Set(zones.map((z) => z.type))]}
-        uniqueTrafficTypes={[...new Set(trafficLights.map((t) => t.type))]}
-        toggleCategory={(category) =>
-          setSelected((prev) => ({ ...prev, [category]: !prev[category] }))
-        }
-        toggleType={(category, type) =>
-          setSelectedTypes((prev) => ({
-            ...prev,
-            [category]: prev[category].includes(type)
-              ? prev[category].filter((t) => t !== type)
-              : [...prev[category], type],
-          }))
-        }
-        isOpen={false}
-        onToggle={() => {}}
-      /> */}
-       {/* <PathController
-        startPoint={userLocation}
-        endPoint={endPoint}
-        onSetSelectionMode={setSelectionMode}
-        onFindPath={findPath}
-        onResetPath={resetPath}
-        isLoading={isLoading}
-        errorMessage={errorMessage}
-        selectionMode={selectionMode}
-      />   */}
       <View style={styles.content}>
         <MapComponent
-          buildings={buildings}
           routes={routes}
           zones={zones}
           trafficLights={trafficLights}

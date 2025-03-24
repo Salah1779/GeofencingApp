@@ -29,17 +29,17 @@ export interface Building {
     boundingBox : BoundingBox | null;
     car:number;
     pedestrian:number;
-    buildings: Map<string, number>;
-    routes: Map<string, number>;
-    trafficLights: number ;
+    buildings:string[];
+    routes: string[];
+    cross_walks: number ;
   }
   
-  export interface BoundingBox {
-    minY: number;
-    maxY: number;
-    minX: number;   
-    maxX: number;
-  }
+ export interface BoundingBox  {
+  minLat: number;
+  maxLat: number;
+  minLon: number;
+  maxLon: number;
+ }
   
   
   export interface SelectedState {
@@ -78,7 +78,6 @@ export interface Building {
   export type SelectionMode = 'start' | 'end' | 'none';
   
   export interface MapComponentProps {
-    buildings: Building[];
     routes: Route[];
     zones: Zone[];
     trafficLights: TrafficLight[];

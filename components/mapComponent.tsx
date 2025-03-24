@@ -15,12 +15,7 @@ import { MapComponentProps, SelectionMode ,Route,Point } from '@/utils/types';
 import { LocationObject } from 'expo-location';
 import simplify from 'simplify-js';
 
-// // Building colors
-// const buildingColors: { [key: string]: string } = {
-//   residential: Colors.buildingResidential,
-//   commercial: Colors.buildingCommercial,
-//   industrial: Colors.buildingIndustrial,
-// };
+
 
 // // Route colors
 // const routeColors: { [key: string]: string } = {
@@ -43,6 +38,13 @@ const getRiskColor = (risk : string): string =>{
   }
 }
 
+const randomRiskValue = () : string=>{
+  const riskValues :string[] = ['low', 'medium', 'high'];
+  const randomIndex = Math.floor(Math.random() * riskValues.length);
+  return riskValues[randomIndex];
+}
+
+
 
 // const getRandomRiskColor=() : string=>{
 //   const colors :string[] = [Colors.riskHighColor, Colors.riskMidColor, Colors.riskLowColor];
@@ -59,27 +61,26 @@ interface ExtendedMapComponentProps extends MapComponentProps {
 }
 
 // Memoized Polyline component for routes
-const RoutePolyline = React.memo(({ route }: { route: Route }) => {
-  const simplifiedNodes = useMemo(() => {
-    const points = route.nodes.map((n) => ({ x: n.lon, y: n.lat }));
-    const simplified = simplify(points, 0.001, true); // Tolerance of 0.001 (adjustable)
-    return simplified.map((p) => ({ latitude: p.y, longitude: p.x }));
-  }, [route.nodes]);
+// const RoutePolyline = React.memo(({ route }: { route: Route }) => {
+//   const simplifiedNodes = useMemo(() => {
+//     const points = route.nodes.map((n) => ({ x: n.lon, y: n.lat }));
+//     const simplified = simplify(points, 0.001, true); // Tolerance of 0.001 (adjustable)
+//     return simplified.map((p) => ({ latitude: p.y, longitude: p.x }));
+//   }, [route.nodes]);
 
-  return (
-    <Polyline
-      coordinates={simplifiedNodes}
-      strokeColor={routeColors[route.type] || Colors.routeHighway}
-      strokeWidth={1}
-      lineCap="round"
-      lineJoin="round"
-      zIndex={2}
-    />
-  );
-});
+//   return (
+//     <Polyline
+//       coordinates={simplifiedNodes}
+//       strokeColor={routeColors[route.type] || Colors.routeHighway}
+//       strokeWidth={1}
+//       lineCap="round"
+//       lineJoin="round"
+//       zIndex={2}
+//     />
+//   );
+// });
 
 const MapComponent: React.FC<ExtendedMapComponentProps> = ({
-  buildings = [],
   routes = [],
   zones = [],
   trafficLights = [],
@@ -156,20 +157,7 @@ const MapComponent: React.FC<ExtendedMapComponentProps> = ({
         </Marker>
       )}
 
-      {/* Buildings
-      {buildings.map((building) =>
-        shouldDisplay('buildings', building.type) ? (
-          <Circle
-            key={building.id}
-            center={{ latitude: building.lat, longitude: building.lon }}
-            radius={8}
-            strokeColor={buildingColors[building.type] || Colors.buildingResidential}
-            fillColor={buildingColors[building.type] || Colors.buildingResidential}
-            strokeWidth={1}
-            zIndex={1}
-          />
-        ) : null
-      )} */}
+
 
       {/* Visible Routes
       {visibleRoutes.map((route) =>
@@ -187,8 +175,8 @@ const MapComponent: React.FC<ExtendedMapComponentProps> = ({
               latitude: p[1],
               longitude: p[0],
             }))}
-            strokeColor={getRiskColor(zone.currentRisk)}
-            fillColor={getRiskColor(zone.currentRisk)}
+            strokeColor='blue'//{getRiskColor(randomRiskValue())}
+            fillColor={getRiskColor(randomRiskValue())}
             strokeWidth={0.5}
             zIndex={3}
           />
