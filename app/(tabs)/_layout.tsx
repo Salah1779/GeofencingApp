@@ -28,7 +28,7 @@ export default function TabLayout() {
 
       />
 
-      Home Tab (Middle)
+      {/* Home Tab (Middle) */}
       <Tabs.Screen
         name="index"
         options={{
