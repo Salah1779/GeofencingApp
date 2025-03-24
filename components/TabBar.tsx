@@ -13,7 +13,7 @@ function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const [dimensions, setDimensions] = useState({ height: 20, width: 100 });
   const buttonWidth = dimensions.width / state.routes.length;
 
-  const tabPositionX = useSharedValue(buttonWidth * 1);
+  const tabPositionX = useSharedValue(buttonWidth *2.5);
 
   const animatedStyle = useAnimatedStyle(() => {
     return {
