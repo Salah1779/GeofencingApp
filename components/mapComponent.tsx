@@ -11,18 +11,8 @@ import MapView, {
 import { StyleSheet, View } from 'react-native';
 import { FontAwesome6, Ionicons } from '@expo/vector-icons';
 import Colors from '@/constants/Colors';
-import { MapComponentProps, SelectionMode ,Route,Point } from '@/utils/types';
+import { MapComponentProps, SelectionMode ,Point } from '@/utils/types';
 import { LocationObject } from 'expo-location';
-import simplify from 'simplify-js';
-
-
-
-// // Route colors
-// const routeColors: { [key: string]: string } = {
-//   highway: Colors.routeHighway,
-//   primary: Colors.routePrimary,
-//   secondary: Colors.routeSecondary,
-// };
 
 
     // rgba(239, 68, 68, 0.5)
@@ -47,8 +37,6 @@ const randomRiskValue = () : string=>{
 
 interface ExtendedMapComponentProps extends MapComponentProps {
   userLocation: any | null;
-  visibleRegion: Region | null;
-  onRegionChange?: (region: Region) => void;
   isSimulation: boolean;
 
 }
@@ -83,8 +71,6 @@ const MapComponent: React.FC<ExtendedMapComponentProps> = ({
   onMapClick,
   selectionMode,
   userLocation,
-  visibleRegion,
-  onRegionChange,
   isSimulation,
 }) => {
   const mapRef = useRef<MapView>(null);
@@ -134,7 +120,7 @@ const MapComponent: React.FC<ExtendedMapComponentProps> = ({
       zoomEnabled={true}
       scrollEnabled={true}
       onPress={handleMapPress}
-      onRegionChangeComplete={onRegionChange}
+     
     >
       {/* User Location Marker */}
       {userLocation && (
@@ -165,8 +151,8 @@ const MapComponent: React.FC<ExtendedMapComponentProps> = ({
           <Polygon
             key={zone.zoneId}
             coordinates={zone.geometry.map((p) => ({
-              latitude: p[1],//p.lat
-              longitude: p[0],//p.lon
+              latitude: p.lat,
+              longitude: p.lon
             }))}
             strokeColor={getRiskColor(randomRiskValue())}
             fillColor={getRiskColor(randomRiskValue())}
@@ -228,16 +214,6 @@ const MapComponent: React.FC<ExtendedMapComponentProps> = ({
   );
 };
 
-// Helper function to check if a point is within the visible region
-const isPointInRegion = (lat: number, lon: number, region: Region): boolean => {
-  const { latitude, longitude, latitudeDelta, longitudeDelta } = region;
-  const minLat = latitude - latitudeDelta / 2;
-  const maxLat = latitude + latitudeDelta / 2;
-  const minLon = longitude - longitudeDelta / 2;
-  const maxLon = longitude + longitudeDelta / 2;
-
-  return lat >= minLat && lat <= maxLat && lon >= minLon && lon <= maxLon;
-};
 
 const styles = StyleSheet.create({
   map: {

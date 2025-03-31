@@ -24,14 +24,11 @@ export interface Building {
   export interface Zone {
     zoneId: string;
     type: string;
-    geometry:number[][] //Array<{lat: number, lon: number }>;
-    currentRisk: 'low' | 'medium' | 'high';
-    boundingBox : BoundingBox | null;
-    car:number;
-    pedestrian:number;
-    buildings:string[];
-    routes: string[];
-    cross_walks: number ;
+    geometry:Array<{lat: number, lon: number }>;
+    currentRisk_car?: 'faible' | 'moyen' | 'elevee' | 'none' ;
+    currentRisk_pedestrian?: 'faible' | 'moyen' | 'elevee' | 'none' ;
+    bounding_box : BoundingBox ;
+  
   }
   
  export interface BoundingBox  {
@@ -41,7 +38,14 @@ export interface Building {
   maxLon: number;
  }
   
-  
+  export interface Notification {
+    id: string; 
+    title: string;
+    description: string;
+    date: Date;
+    seen: boolean;
+    
+  }
   export interface SelectedState {
     buildings: boolean;
     routes: boolean;
@@ -78,17 +82,16 @@ export interface Building {
   export type SelectionMode = 'start' | 'end' | 'none';
   
   export interface MapComponentProps {
-    routes: Route[];
+    routes?: Route[];
     zones: Zone[];
-    trafficLights: TrafficLight[];
+    trafficLights?: TrafficLight[];
     shouldDisplay: (category: keyof SelectedState, type: string) => boolean;
-    endPoint: Point | null;
-    path: Array<Point |LocationObject> | null;
+    endPoint?: Point | null;
+    path?: Array<Point |LocationObject> | null;
     onMapClick: (point:any, mode: SelectionMode) => void;
     selectionMode: SelectionMode;
     userLocation?: LocationObject|Point | null;
-    visibleRegion?: Region | null;
-    onRegionChange?: (region: Region) => void; // Add this
+   
   }
 
   export interface user {

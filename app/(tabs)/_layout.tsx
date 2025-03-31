@@ -23,6 +23,7 @@ export default function TabLayout() {
         name="profile"
         options={{
           title: 'Profile',
+          headerShown: false
          }} // For accessibility and header
          
 
@@ -43,6 +44,7 @@ export default function TabLayout() {
         name="notifications"
         options={{
           title: 'Notifications',
+          headerShown: false, 
         }}
       />
     </Tabs>

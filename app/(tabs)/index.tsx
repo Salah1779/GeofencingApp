@@ -1,6 +1,7 @@
 
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { View, StyleSheet, TouchableOpacity, Text } from 'react-native';
+import { useFocusEffect } from "@react-navigation/native";
 import axios from 'axios';
 import RBush from 'rbush';
 import booleanPointInPolygon from '@turf/boolean-point-in-polygon';
@@ -28,15 +29,15 @@ import { getData } from '@/utils/AsyncStorage';
 import {getRiskLevel} from '@/utils/helpers';
 
 // API endpoints
-const IP_BACKEND = '192.168.11.100' ;
+const IP_BACKEND = '192.168.11.101' ;
 const BUILDINGS_API = `http://${IP_BACKEND}:8080/api/buildings`;
 const ROUTES_API = `http://${IP_BACKEND}:8081/api/routes`;
 const ZONES_API = `http://${IP_BACKEND}:8084/api/zones`;
 const TRAFFIC_API = `http://${IP_BACKEND}:8083/api/trafficLights`;
-const ASTAR_API = `http://${IP_BACKEND}:8090/api/findPath`;
-const Routes_Post = `http://${IP_BACKEND}:8090/api/sendRoutes`;
-const Zones_RISK = `http://${IP_BACKEND}:8085/api/buildingRisc/risc`;
-const WEBSOCKET_URL = `ws://${IP_BACKEND}:8085/risk-updates`;
+// const ASTAR_API = `http://${IP_BACKEND}:8090/api/findPath`;
+// const Routes_Post = `http://${IP_BACKEND}:8090/api/sendRoutes`;
+// const Zones_RISK = `http://${IP_BACKEND}:8085/api/buildingRisc/risc`;
+// const WEBSOCKET_URL = `ws://${IP_BACKEND}:8085/risk-updates`;
 
 const Home: React.FC = () => {
   const [buildings, setBuildings] = useState<Building[]>([]);
@@ -69,7 +70,7 @@ const Home: React.FC = () => {
   const { notificationPermissionGranted } = useNotificationPermission();
 
   // Ajouter une référence pour suivre l'état actuel des zones
-   const zonesRef = useRef(zones);
+  const zonesRef = useRef(zones);
   const rtree = useRef(new RBush());
   const lastCheckTime = useRef(0);
   const checkInterval = 5000;
@@ -86,14 +87,14 @@ useEffect(() => {
 useEffect(() => {
   const fetchData = async () => {
     try {
-      const [ routesRes, zonesRes,] = await Promise.all([
+      const [zonesRes]= await Promise.all([
        
-        axios.get(ROUTES_API),
         axios.get(ZONES_API),
  
       ]);
 
       const fetchedZones = zonesRes.data.processedZones;
+      
       setAllZones(fetchedZones);
      
     
@@ -162,18 +163,22 @@ useEffect(() => {
   useEffect(() => {
     rtree.current.clear();
     allZones.forEach((zone) => {
-      const bbox =getBoundingBox(zone.geometry);
+      const bbox ={
+        minX: zone.bounding_box.minLon,
+        minY: zone.bounding_box.minLat,
+        maxX: zone.bounding_box.maxLon,
+        maxY: zone.bounding_box.maxLat
+      }
       
       rtree.current.insert({ ...bbox, zoneId: zone.zoneId });
     });
-    //console.log('RTree Built' , rtree.current);
-
+    
     const currentLoc = isSimulationMode ? simulatedLocation : userLocation;
-    //console.log('Current Location:', currentLoc);
+    
     if (currentLoc) {
       const nearbyZones = getNearbyZones(currentLoc, allZones);
       setZones(nearbyZones);
-     // console.log('Nearby Zones:', nearbyZones.length);
+    
     } else {
       console.log('No current location available for filtering zones');
     }
@@ -204,29 +209,8 @@ useEffect(() => {
     };
   }, [locationPermissionGranted, isSimulationMode]);
 
-  // Compute bounding box for a zone
-  const getBoundingBox = useCallback((geometry: any) => {
-    let minLon = Infinity, minLat = Infinity, maxLon = -Infinity, maxLat = -Infinity;
-    geometry.forEach((point: any) => {
-      let lon, lat;
-      if (Array.isArray(point)) {
-        // Assume [lon, lat]
-        lon = point[0];
-        lat = point[1];
-      } else {
-        // Assume object with properties
-        lon = point.lon;
-        lat = point.lat;
-      }
-      if (lon === undefined || lat === undefined) return;
-      minLon = Math.min(minLon, lon);
-      minLat = Math.min(minLat, lat);
-      maxLon = Math.max(maxLon, lon);
-      maxLat = Math.max(maxLat, lat);
-    });
-    return { minX: minLon, minY: minLat, maxX: maxLon, maxY: maxLat };
-  }, []);
-
+  
+  
   // Haversine formula for distance (in kilometers)
   const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
     const R = 6371; // Earth's radius in kilometers
@@ -248,7 +232,7 @@ useEffect(() => {
     const nearby = zones.filter((zone) => {
       const centroid = getZoneCentroid(zone.geometry);
       const distance = getDistance(lat, lon, centroid.lat, centroid.lon);
-      return distance <= 1;
+      return distance <= 1 ;
     });
     return nearby;
   };
@@ -259,8 +243,8 @@ useEffect(() => {
       lonSum = 0,
       count = 0;
     geometry.forEach((point: any) => {
-      const lon = point[0];
-      const lat = point[1];
+      const lon = point.lon;
+      const lat = point.lat;
       if (lon !== undefined && lat !== undefined) {
         latSum += lat;
         lonSum += lon;
@@ -289,10 +273,10 @@ const handleLocationUpdate = (location: any) => {
     //const zone = zones.find((z) => z.zoneId === candidate.zoneId);
     if (zone) {
       // Conversion de la géométrie au format attendu par Turf (format [lat, lon] -> [lon, lat])
-      const geometry = zone.geometry.map((p: any) => [p[0], p[1]]);
+      const geometry :any[] = zone.geometry.map((p: any) => [p.lat, p.lon]);  //p[0] : lon, p[1] : lat
       const closedGeometry =
-        geometry[0][0] === geometry[geometry.length - 1][0] &&
-        geometry[0][1] === geometry[geometry.length - 1][1]
+        geometry[0].lat === geometry[geometry.length - 1].lat &&
+        geometry[0].lon === geometry[geometry.length - 1].lon
           ? geometry
           : [...geometry, geometry[0]];
       const turfPolygon = polygon([closedGeometry]);
@@ -376,7 +360,7 @@ const handleLocationUpdate = (location: any) => {
      
       <View style={styles.content}>
         <MapComponent
-          routes={routes}
+          routes={routes||[]}
           zones={zones}
           trafficLights={trafficLights}
           shouldDisplay={(category, type) =>
@@ -387,8 +371,6 @@ const handleLocationUpdate = (location: any) => {
           onMapClick={handleMapClick}
           selectionMode={selectionMode}
           userLocation={isSimulationMode ? simulatedLocation : userLocation}
-          visibleRegion={null}
-          onRegionChange={() => {}}
           isSimulation={isSimulationMode}
         />
         <TouchableOpacity style={styles.simulationToggle} onPress={toggleSimulationMode}>

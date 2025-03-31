@@ -27,3 +27,11 @@ export const getData = async <T>(key: string): Promise<T | null> => {
     return null; // Return null in case of error to ensure consistent return type
   }
 };
+
+export const  removeData= async (key: string): Promise<void> => {
+  try {
+    await AsyncStorage.removeItem(key);
+  } catch (e: unknown) {
+    console.error('Error removing data:', e instanceof Error ? e.message : String(e));
+  }
+};
