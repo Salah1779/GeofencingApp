@@ -41,7 +41,7 @@ export interface Building {
   export interface Notification {
     id: string; 
     title: string;
-    description: string;
+    message: string;
     date: Date;
     seen: boolean;
     
@@ -94,11 +94,7 @@ export interface Building {
    
   }
 
-  export interface user {
-    name: string;
-    email: string;
-    status : string;
-  }
+
   export interface StatusOption {
     label: string;
     icon: string;
@@ -109,4 +105,12 @@ export interface Building {
     longitude: number;
     latitudeDelta: number;
     longitudeDelta: number;
+  }
+
+  export interface User {
+    userId: number;
+    first_name: string;
+    last_name: string;
+    email: string;
+    token?: string;
   }

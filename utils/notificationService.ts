@@ -1,4 +1,6 @@
 import * as Notifications from 'expo-notifications';
+import { Notification } from '@/utils/types';
+
 
 // Configure notification handler (typically called once in the app's entry point)
 export const configureNotifications = () => {
@@ -11,15 +13,22 @@ export const configureNotifications = () => {
   });
 };
 
-// Send a notification with the given message
-export const sendNotification = async (message: string): Promise<void> => {
+
+export const sendNotification = async (notif: Notification): Promise<void> => {
+  console.log('Sending notification:', notif.message + '  for ' + notif.title);
   try {
     await Notifications.scheduleNotificationAsync({
       content: {
-        title: 'Zone Alert',
-        body: message,
+        title: notif.title,
+        body: notif.message,
+        //sound: 'default',
+        // badge: 1,
+        // color: 'rgba(214, 240, 66, 0.5)',
+        // priority: Notifications.AndroidNotificationPriority.HIGH,
+        // vibrate: [0, 250, 250, 250],
+        
       },
-      trigger: null, // Immediate notification
+      trigger: null, 
     });
   } catch (error) {
     console.error('Error sending notification:', error);

@@ -1,13 +1,21 @@
-// Risk threshold constants
-export const RISK_THRESHOLDS = {
-  LOW: 33,
-  MEDIUM: 66,
-  HIGH: 100
-};
+import { getData } from "./AsyncStorage"
 
-export const getRiskLevel = (value: number): 'low' | 'medium' | 'high' => {
-  if (value <= RISK_THRESHOLDS.LOW) return 'low';
-  if (value <= RISK_THRESHOLDS.MEDIUM) return 'medium';
-  return 'high';
-};
+export const getCurrentStatus = async (
+  setStatus: React.Dispatch<React.SetStateAction<string | null>>,
+  initialStatus: string | null = null
+): Promise<string|null> => {
 
+ 
+    try {
+      const storedStatus = await getData<string>('userStatus');
+
+      if (storedStatus) {
+        setStatus(storedStatus);
+        return storedStatus;
+      }
+    } catch (error) {
+      console.error('Error retrieving user status:', error);
+    }
+  
+  return 'unknown'; // Default fallback string
+}

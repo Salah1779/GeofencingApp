@@ -16,11 +16,12 @@ import COLORS from '@/constants/Colors';
 import StatusModal from '@/components/StatusModal';
 import CustomSwitch from '@/components/CustomSwitch';
 import { getData, storeData, removeData } from '@/utils/AsyncStorage';
-import { StatusOption } from '@/utils/types';
+import { StatusOption,User } from '@/utils/types';
 
 const ProfileScreen = () => {
   const navigation = useNavigation();
   const { width } = useWindowDimensions();
+  const [user , setUser] = useState<User | null>(null);
   const [status, setStatus] = useState('pedestrian');
   const [modalVisible, setModalVisible] = useState(false);
   const [locationEnabled, setLocationEnabled] = useState(true);
@@ -45,14 +46,25 @@ const ProfileScreen = () => {
       if (locationPref !== null) {
         setLocationEnabled(locationPref);
       }
-    };
-    
+      const mockUser: User = {
+        userId: 2,
+        first_name: 'John',
+        last_name: 'Doe',
+        email: 'K0v4V@example.com',  
+      }; 
+
+      const storedUser = await getData<User>('user');
+      setUser(storedUser ?? mockUser);
+
+      }
+  
     loadUserData();
   }, []);
 
   const handleStatusChange = async (newStatus: string) => {
     setStatus(newStatus);
     await storeData('userStatus', newStatus);
+    console.log('Status changed to:', await getData<string>('userStatus'));
     setModalVisible(false);
   };
 
@@ -128,8 +140,8 @@ const ProfileScreen = () => {
             </View>
           </Animated.View>
           
-          <Text style={styles.name}>Salah eddine</Text>
-          <Text style={styles.email}>email@example.com</Text>
+          <Text style={styles.name}>{user?.first_name}</Text>
+          <Text style={styles.email}>{user?.email}</Text>
           
           {/* Status Button */}
           <TouchableOpacity

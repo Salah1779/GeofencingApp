@@ -1,18 +1,16 @@
-
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { View, StyleSheet, TouchableOpacity, Text } from 'react-native';
-import { useFocusEffect } from "@react-navigation/native";
 import axios from 'axios';
 import RBush from 'rbush';
 import booleanPointInPolygon from '@turf/boolean-point-in-polygon';
 import { polygon, point } from '@turf/helpers';
 import * as Location from 'expo-location';
 import Colors from '@/constants/Colors';
-import Sidebar from '@/components/SideBar';
 import MapComponent from '@/components/mapComponent';
-import PathController from '@/components/PathController';
 import { configureNotifications, sendNotification } from '@/utils/notificationService';
+import {EXPO_PUBLIC_ZONES_API, EXPO_PUBLIC_NOTIFICATIONS_GENERATE,} from '@/constants/endpoints';
 import {
+  User,
   Building,
   Route,
   Zone,
@@ -25,21 +23,14 @@ import {
 } from '@/utils/types';
 import useLocationPermission from '@/hooks/useLocationPermission';
 import useNotificationPermission from '@/hooks/useNotificationPermission';
-import { getData } from '@/utils/AsyncStorage';
-import {getRiskLevel} from '@/utils/helpers';
+import { getData , storeData } from '@/utils/AsyncStorage';
+import { getCurrentStatus } from '@/utils/helpers';
 
-// API endpoints
-const IP_BACKEND = '192.168.11.101' ;
-const BUILDINGS_API = `http://${IP_BACKEND}:8080/api/buildings`;
-const ROUTES_API = `http://${IP_BACKEND}:8081/api/routes`;
-const ZONES_API = `http://${IP_BACKEND}:8084/api/zones`;
-const TRAFFIC_API = `http://${IP_BACKEND}:8083/api/trafficLights`;
-// const ASTAR_API = `http://${IP_BACKEND}:8090/api/findPath`;
-// const Routes_Post = `http://${IP_BACKEND}:8090/api/sendRoutes`;
-// const Zones_RISK = `http://${IP_BACKEND}:8085/api/buildingRisc/risc`;
-// const WEBSOCKET_URL = `ws://${IP_BACKEND}:8085/risk-updates`;
+
 
 const Home: React.FC = () => {
+  const [user, setUser] = useState<User | null>(null);
+  const [status, setStatus] = useState<string | null>(null);
   const [buildings, setBuildings] = useState<Building[]>([]);
   const [routes, setRoutes] = useState<Route[]>([]);
   const [zones, setZones] = useState<Zone[]>([]);
@@ -69,17 +60,36 @@ const Home: React.FC = () => {
   const { locationPermissionGranted, userLocation } = useLocationPermission();
   const { notificationPermissionGranted } = useNotificationPermission();
 
-  // Ajouter une référence pour suivre l'état actuel des zones
+
   const zonesRef = useRef(zones);
   const rtree = useRef(new RBush());
   const lastCheckTime = useRef(0);
   const checkInterval = 5000;
 
   useEffect(() => {
-    configureNotifications();
+    configureNotifications(); 
   }, []);
 
-  // Mettre à jour la référence quand les zones changent
+
+useEffect(() => {
+  const getUserFromStorage = async () => {
+    const storedUser = await getData<User>('user');
+    setUser(storedUser ?? null);
+  };
+
+
+  const user : User = {
+    userId: 1,
+    email: "example@gmail.com",
+    first_name: 'Salaheddine',
+    last_name: 'Elbouazaoui',
+    token:""
+
+  }
+  storeData('user', user);
+  getUserFromStorage();
+}, []);
+
 useEffect(() => {
   zonesRef.current = zones;
 }, [zones]);
@@ -89,7 +99,7 @@ useEffect(() => {
     try {
       const [zonesRes]= await Promise.all([
        
-        axios.get(ZONES_API),
+        axios.get(EXPO_PUBLIC_ZONES_API),
  
       ]);
 
@@ -103,60 +113,11 @@ useEffect(() => {
     }
   };
   fetchData();
+  
 }, []);
-// Fetch risk data and update zones
-// useEffect(() => {
-//   const fetchRiskData = async () => {
-//     // Ne rien faire si les zones ne sont pas chargées
-//     if (!zones.length) return;
-
-//     try {
-//       console.log('Length of Data sent' ,zonesRef.current.length );
-//       console.log('first Zone before Risk calculation', JSON.stringify(zonesRef.current[0]));
-//       const response = await axios.post(Zones_RISK, { zones: zonesRef.current });
-//       const status = await getData('status') || 'pedestrian';
-      
-//        setZones(response.data.zones.map((zone: any) => ({
-//         ...zone,
-//         currentRisk: getRiskLevel(zone[`${status}`])
-//       })));
-//       console.log('first Zone after Risk calculation', response.data.zones[0]);
-
-//     } catch (error) {
-//       console.error('Risk calculation error:', error);
-//     }
-//   };
-
-//   fetchRiskData();
-// }, [zones]); // Déclencher quand les zones changent
 
 
-  // Fetch API data on mount
- 
 
-//WebSocket pour les mises à jour en temps réel
-// useEffect(() => {
-//   const ws = new WebSocket(WEBSOCKET_URL);
-
-//   ws.onmessage = async (event) => {
-//     const message = JSON.parse(event.data);
-//     if (message.type === 'zone_update') {
-//       const status = await getData('status') || 'pedestrian';
-
-//       setZones(prevZones => 
-//         prevZones.map(z => 
-//           z.zoneId === message.data.zoneId ? {
-//             ...z,
-//             ...message.data,
-//             currentRisk: getRiskLevel(message.data[`${status}`])
-//           } : z
-//         )
-//       );
-//     }
-//   };
-
-//   return () => ws.close();
-// }, []); // Une seule initialisation
 
   // Build R-tree and filter nearby zones
   
@@ -210,7 +171,6 @@ useEffect(() => {
   }, [locationPermissionGranted, isSimulationMode]);
 
   
-  
   // Haversine formula for distance (in kilometers)
   const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
     const R = 6371; // Earth's radius in kilometers
@@ -254,8 +214,30 @@ useEffect(() => {
     return { lat: latSum / count, lon: lonSum / count };
   };
 
+// Generate Notification
+  const generateNotification = async (zone: Zone, user : User |null, currentStatus: 'entering' | 'leaving' , activity: string| null) => {
+    try {
+      const response = await axios.post(EXPO_PUBLIC_NOTIFICATIONS_GENERATE, {
+         type: zone.type,
+         currentRisk: "Elevee",
+         status: currentStatus,
+         userContext: {
+          name: user?.first_name ?? "Mock",
+          user_id : user?.userId
+        },
+        activity: activity,
+      });
+      if(response.status === 200){
+        
+        sendNotification(response.data.newNotification);
+      }
+      
+    } catch (error) {
+      console.error('Error generating notification:', error);
+    }
+  };
 
-const handleLocationUpdate = (location: any) => {
+const handleLocationUpdate = async(location: any) => {
   const now = Date.now();
   if (now - lastCheckTime.current < checkInterval) return;
   lastCheckTime.current = now;
@@ -264,25 +246,18 @@ const handleLocationUpdate = (location: any) => {
   const lat = location.coords?.latitude ?? location.lat;
   const turfPoint = point([lon, lat]);
 
-  
-  console.log("Candidates:", zones.length);
-  
-
   let newZone: Zone | null = null;
   for (const zone of zones) {
-    //const zone = zones.find((z) => z.zoneId === candidate.zoneId);
     if (zone) {
       // Conversion de la géométrie au format attendu par Turf (format [lat, lon] -> [lon, lat])
-      const geometry :any[] = zone.geometry.map((p: any) => [p.lat, p.lon]);  //p[0] : lon, p[1] : lat
+      const geometry :any[] = zone.geometry.map((p: any) => [p.lon, p.lat]);
       const closedGeometry =
         geometry[0].lat === geometry[geometry.length - 1].lat &&
         geometry[0].lon === geometry[geometry.length - 1].lon
           ? geometry
           : [...geometry, geometry[0]];
       const turfPolygon = polygon([closedGeometry]);
-      //console.log('Checking Polygon:', turfPolygon );
       const bool=booleanPointInPolygon(turfPoint, turfPolygon);
-      console.log('Boolean:', bool);
       if (bool===true) {
         newZone = zone;
         console.log('New Zone:', newZone.zoneId, newZone.type);
@@ -291,30 +266,34 @@ const handleLocationUpdate = (location: any) => {
     }
   }
  
-  console.log("current Zone" , currentZone?.zoneId );
+
+  const currentStatus = (await getCurrentStatus(setStatus, status)) || 'pedestrian';
+  console.log("current Status", currentStatus);
+
+  console.log("current Zone", currentZone?.zoneId);
   if (newZone && (!currentZone || newZone.zoneId !== currentZone.zoneId)) {
-    console.log('Entering Zone:', newZone.zoneId, newZone.type);
-    sendNotification(`Entered ${newZone.type} zone`).catch(err => console.error(err));
-    setCurrentZone(newZone);
+    console.log('Entering Zone:', newZone.zoneId, newZone.type , currentStatus.toString());
+    generateNotification(newZone, user, 'entering',currentStatus.toString());
+    
   } else if (!newZone && currentZone) {
-    console.log('Exiting Zone:', currentZone.zoneId, currentZone.type);
-    sendNotification(`Exited ${currentZone.type} zone`).catch(err => console.error(err));
-    setCurrentZone(null);
+    console.log('Leaving Zone:', currentZone.zoneId, currentZone.type , currentStatus.toString());
+    generateNotification(currentZone, user, 'leaving',currentStatus.toString());
   }
 
   const nearbyZones = getNearbyZones(location, allZones);
   setZones(nearbyZones);
 };
 
-  const handleMapClick = (point: Point, mode: SelectionMode) => {
-    if (isSimulationMode) {
-      setSimulatedLocation(point);
-      handleLocationUpdate(point);
-    } else if (mode === 'end') {
-      setEndPoint(point);
-      setSelectionMode('none');
-    }
-  };
+
+const handleMapClick = (point: Point, mode: SelectionMode) => {
+  if (isSimulationMode) {
+    setSimulatedLocation(point);
+    handleLocationUpdate(point);
+  } else if (mode === 'end') {
+    setEndPoint(point);
+    setSelectionMode('none');
+  }
+};
 
   const toggleSimulationMode = useCallback(() => {
     setIsSimulationMode((prev) => !prev);
@@ -416,3 +395,4 @@ const styles = StyleSheet.create({
 });
 
 export default Home;
+

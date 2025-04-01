@@ -1,4 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useFocusEffect } from 'expo-router';
+import axios from 'axios';
+import {EXPO_PUBLIC_NOTIFICATIONS_DISPLAY}  from '@/constants/endpoints';
+import { getData } from '@/utils/AsyncStorage';
+import {User} from '@/utils/types';
 import { 
   View, 
   Text, 
@@ -17,43 +22,41 @@ const Notifications = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [currentTime, setCurrentTime] = useState(new Date());
 
-  // Mock fetch function to simulate API call
+  // Fetch notifications from API
   const fetchNotifications = async () => {
-    // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Example notifications data - replace with actual API call
-    
-    setNotifications([]);
-    setLoading(false);
-    setRefreshing(false);
+    try {
+      const user : User = await getData<User>('user');
+      const { data } = await axios.get(EXPO_PUBLIC_NOTIFICATIONS_DISPLAY+ '/' + String(user.userId));
+     
+      data.map((n: any) => n.date = new Date(n.date));
+      setNotifications(data);
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
   };
 
   // Refresh handler for pull-to-refresh
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     fetchNotifications();
+    //updateNotificationsTime();
   }, []);
 
   // Initial data fetch
-  useEffect(() => {
-    fetchNotifications();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      fetchNotifications();
+    }, [])
+  );
 
-  // Update current time every 5 minutes to refresh relative time displays
-  useEffect(() => {
-    const intervalId = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 5 * 60 * 1000); // 5 minutes in milliseconds
-    
-    return () => clearInterval(intervalId);
-  }, []);
 
   // Format the date as relative time
   const formatRelativeTime = (date: Date) => {
-    const now = currentTime;
+    const now = new Date();
     const diffMs = now.getTime() - date.getTime();
     const diffSec = Math.floor(diffMs / 1000);
     const diffMin = Math.floor(diffSec / 60);
@@ -82,7 +85,7 @@ const Notifications = () => {
       {!item.seen && <View style={styles.unreadDot} />}
       <View style={styles.notificationContent}>
         <Text style={styles.notificationTitle}>{item.title}</Text>
-        <Text style={styles.notificationDescription}>{item.description}</Text>
+        <Text style={styles.notificationDescription}>{item.message}</Text>
         <Text style={styles.notificationDate}>{formatRelativeTime(item.date)}</Text>
       </View>
     </TouchableOpacity>
@@ -91,10 +94,10 @@ const Notifications = () => {
   // Empty state component when there are no notifications
   const EmptyNotifications = () => (
     <View style={styles.emptyContainer}>
-      <Image 
+      {/* <Image 
         source={{ uri: 'https://via.placeholder.com/200' }} 
         style={styles.emptyImage}
-      />
+      /> */}
       <Text style={styles.emptyTitle}>No Notifications Yet</Text>
       <Text style={styles.emptyDescription}>
         We'll notify you when something important happens
@@ -108,13 +111,13 @@ const Notifications = () => {
       
       {loading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#6200ee" />
+          <ActivityIndicator size="large" color={Colors.secondary} />
           <Text style={styles.loadingText}>Loading notifications...</Text>
         </View>
       ) : (
         <FlatList
-          data={notifications}
-          keyExtractor={(item) => item.id}
+          data={notifications.slice().reverse()}
+          keyExtractor={(_, index) => index.toString()}
           renderItem={renderNotification}
           contentContainerStyle={styles.notificationsList}
           ListEmptyComponent={EmptyNotifications}
