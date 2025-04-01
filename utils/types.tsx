@@ -25,8 +25,8 @@ export interface Building {
     zoneId: string;
     type: string;
     geometry:Array<{lat: number, lon: number }>;
-    currentRisk_car?: 'faible' | 'moyen' | 'elevee' | 'none' ;
-    currentRisk_pedestrian?: 'faible' | 'moyen' | 'elevee' | 'none' ;
+    currentRisk_car?: string;
+    currentRisk_pedestrian?: string;
     bounding_box : BoundingBox ;
   
   }

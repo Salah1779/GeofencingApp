@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { useFocusEffect } from 'expo-router';
 import { View, StyleSheet, TouchableOpacity, Text } from 'react-native';
 import axios from 'axios';
 import RBush from 'rbush';
@@ -8,7 +9,11 @@ import * as Location from 'expo-location';
 import Colors from '@/constants/Colors';
 import MapComponent from '@/components/mapComponent';
 import { configureNotifications, sendNotification } from '@/utils/notificationService';
-import {EXPO_PUBLIC_ZONES_API, EXPO_PUBLIC_NOTIFICATIONS_GENERATE,} from '@/constants/endpoints';
+import {
+  EXPO_PUBLIC_ZONES_API, 
+  EXPO_PUBLIC_NOTIFICATIONS_GENERATE,
+ EXPO_PUBLIC_RISK_API
+} from '@/constants/endpoints';
 import {
   User,
   Building,
@@ -66,6 +71,8 @@ const Home: React.FC = () => {
   const lastCheckTime = useRef(0);
   const checkInterval = 5000;
 
+
+
   useEffect(() => {
     configureNotifications(); 
   }, []);
@@ -116,11 +123,36 @@ useEffect(() => {
   
 }, []);
 
-
-
+// Risk calculation
+  const fetchRiskCalculation = async () => {
+    if(zones.length === 0) return;
+    try {
+      const response = await axios.post(EXPO_PUBLIC_RISK_API, {
+        zone_ids: zones.map((zone) => zone.zoneId),
+      });
+      const zoneRisks : any[] = response.data.risks;
+      const riskMappedZones = zones.map((zone) => {
+        const matchedRisk = zoneRisks.find(risk => risk.zoneId === zone.zoneId);
+        return {
+          ...zone,
+          currentRisk_car: matchedRisk ? matchedRisk.risk : 'none',
+          currentRisk_pedestrian: matchedRisk ? matchedRisk.risk : 'none',
+        };
+      });
+      setZones(riskMappedZones);
+    } catch (error) {
+      console.error('Error fetching risk calculation:', error);
+    }
+  };
+// Risk calculation
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchRiskCalculation();
+    }, 60000);
+    return () => clearTimeout(timer);
+  }, [zones]);
 
   // Build R-tree and filter nearby zones
-  
   useEffect(() => {
     rtree.current.clear();
     allZones.forEach((zone) => {
@@ -183,7 +215,7 @@ useEffect(() => {
     return R * c;
   };
 
-
+// Filter nearby zones
   const getNearbyZones = (location: any, zones: Zone[]): Zone[] => {
     if (!location) return zones;
     const lat = 'coords' in location ? location.coords.latitude : location.lat;
@@ -237,6 +269,7 @@ useEffect(() => {
     }
   };
 
+  // Handle location update
 const handleLocationUpdate = async(location: any) => {
   const now = Date.now();
   if (now - lastCheckTime.current < checkInterval) return;
@@ -351,6 +384,7 @@ const handleMapClick = (point: Point, mode: SelectionMode) => {
           selectionMode={selectionMode}
           userLocation={isSimulationMode ? simulatedLocation : userLocation}
           isSimulation={isSimulationMode}
+          userStatus={status}
         />
         <TouchableOpacity style={styles.simulationToggle} onPress={toggleSimulationMode}>
           <Text style={styles.simulationText}>

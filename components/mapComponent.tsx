@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useMemo } from 'react';
+import React, { useEffect, useRef, useMemo , useState } from 'react';
 import MapView, {
   Marker,
   Polyline,
@@ -12,16 +12,19 @@ import { StyleSheet, View } from 'react-native';
 import { FontAwesome6, Ionicons } from '@expo/vector-icons';
 import Colors from '@/constants/Colors';
 import { MapComponentProps, SelectionMode ,Point } from '@/utils/types';
+import {Zone} from '@/utils/types'; 
 import { LocationObject } from 'expo-location';
 
 
     // rgba(239, 68, 68, 0.5)
      // rgba(245, 158, 11, 0.5)
     // rgba(34, 197, 94, 0.5)
-const getRiskColor = (risk : string): string =>{
-  if(risk === 'high'){
+const getRiskColor = (risk : string | undefined): string =>{
+  if(!risk || risk.trim() === ''|| risk===undefined)
+     return randomRiskValue()
+  if(risk.toLowerCase() === 'élevé'){
     return Colors.riskHighColor;
-  }else if(risk === 'medium'){
+  }else if(risk === 'moyen'){
     return Colors.riskMidColor;
   }else{
     return Colors.riskLowColor;
@@ -29,15 +32,18 @@ const getRiskColor = (risk : string): string =>{
 }
 
 const randomRiskValue = () : string=>{
-  const riskValues :string[] = ['low', 'medium', 'high'];
+  const riskValues :string[] = ['faible', 'moyen', 'élevé'];
   const randomIndex = Math.floor(Math.random() * riskValues.length);
   return riskValues[randomIndex];
 }
 
 
+
+
 interface ExtendedMapComponentProps extends MapComponentProps {
   userLocation: any | null;
   isSimulation: boolean;
+  userStatus: string | null
 
 }
 
@@ -72,9 +78,15 @@ const MapComponent: React.FC<ExtendedMapComponentProps> = ({
   selectionMode,
   userLocation,
   isSimulation,
+  userStatus
 }) => {
   const mapRef = useRef<MapView>(null);
+const [status, setStatus] = useState<string | null>(userStatus);
 
+const getFillColor = (zone: Zone, status: string | null): string=> {
+  const risk = status === 'pedestrian' ? zone.currentRisk_pedestrian ||undefined : zone.currentRisk_car ||undefined;
+  return getRiskColor(risk);
+};
 
   // Center the map on user location when it updates
   useEffect(() => {
@@ -87,6 +99,7 @@ const MapComponent: React.FC<ExtendedMapComponentProps> = ({
       });
     }
   }, [userLocation]);
+
 
   // Handle map press for click events
   const handleMapPress = (event: MapPressEvent) => {
@@ -154,8 +167,8 @@ const MapComponent: React.FC<ExtendedMapComponentProps> = ({
               latitude: p.lat,
               longitude: p.lon
             }))}
-            strokeColor={getRiskColor(randomRiskValue())}
-            fillColor={getRiskColor(randomRiskValue())}
+            strokeColor={getRiskColor(randomRiskValue())}//getFillColor(zone, status) to separate between pedestrin and car
+            fillColor={getRiskColor(randomRiskValue())}//getFillColor(zone, status)
             strokeWidth={0.5}
             zIndex={3}
           />
@@ -163,7 +176,7 @@ const MapComponent: React.FC<ExtendedMapComponentProps> = ({
       )}
 
       {/* Traffic Lights */}
-      {trafficLights.map((trafficLight) =>
+      {/* {trafficLights.map((trafficLight) =>
         shouldDisplay('trafficLights', trafficLight.type) ? (
           <Marker
             key={trafficLight.id}
@@ -176,10 +189,10 @@ const MapComponent: React.FC<ExtendedMapComponentProps> = ({
             <FontAwesome6 name="traffic-light" size={25} color={Colors.trafficLightColor} />
           </Marker>
         ) : null
-      )}
+      )} */}
 
       {/* Path */}
-      {path && path.length > 0 && (
+      {/* {path && path.length > 0 && (
         <Polyline
           coordinates={path.map((p) => {
             if ('coords' in p) {
@@ -198,18 +211,18 @@ const MapComponent: React.FC<ExtendedMapComponentProps> = ({
           strokeWidth={6}
           zIndex={5}
         />
-      )}
+      )} */}
 
   
       {/* End Marker */}
-      {endPoint && (
+      {/* {endPoint && (
         <Marker
           coordinate={{ latitude: endPoint.lat, longitude: endPoint.lng }}
           zIndex={7}
         >
           <Ionicons name="location-sharp" size={30} color={Colors.error} />
         </Marker>
-      )}
+      )} */}
     </MapView>
   );
 };

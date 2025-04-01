@@ -6,4 +6,4 @@ export const EXPO_PUBLIC_TRAFFIC_API: string = `http://${IP_BACKEND}:8083/api/tr
 export const EXPO_PUBLIC_ASTAR_API: string = `http://${IP_BACKEND}:8090/api/findPath`;
 export const EXPO_PUBLIC_NOTIFICATIONS_DISPLAY: string = `http://${IP_BACKEND}:8050/api/notifications`;
 export const EXPO_PUBLIC_NOTIFICATIONS_GENERATE: string = `http://${IP_BACKEND}:8050/api/zone-notification`;
-
+export const EXPO_PUBLIC_RISK_API: string = `http://${IP_BACKEND}:8001/zone_ids`;
