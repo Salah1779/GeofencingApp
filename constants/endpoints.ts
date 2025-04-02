@@ -1,4 +1,4 @@
-export const IP_BACKEND: string = '192.168.11.101';
+export const IP_BACKEND: string = '192.168.1.8';
 export const EXPO_PUBLIC_BUILDINGS_API: string = `http://${IP_BACKEND}:8080/api/buildings`;
 export const EXPO_PUBLIC_ROUTES_API: string = `http://${IP_BACKEND}:8081/api/routes`;
 export const EXPO_PUBLIC_ZONES_API: string = `http://${IP_BACKEND}:8084/api/zones`;

@@ -167,8 +167,8 @@ const getFillColor = (zone: Zone, status: string | null): string=> {
               latitude: p.lat,
               longitude: p.lon
             }))}
-            strokeColor={getRiskColor(randomRiskValue())}//getFillColor(zone, status) to separate between pedestrin and car
-            fillColor={getRiskColor(randomRiskValue())}//getFillColor(zone, status)
+            strokeColor={getFillColor(zone, status)}//getFillColor(zone, status) to separate between pedestrin and car
+            fillColor={getFillColor(zone, status)}//getFillColor(zone, status)
             strokeWidth={0.5}
             zIndex={3}
           />

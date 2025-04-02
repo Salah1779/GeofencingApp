@@ -130,6 +130,7 @@ useEffect(() => {
       const response = await axios.post(EXPO_PUBLIC_RISK_API, {
         zone_ids: zones.map((zone) => zone.zoneId),
       });
+      // console.log(response);
       const zoneRisks : any[] = response.data.risks;
       const riskMappedZones = zones.map((zone) => {
         const matchedRisk = zoneRisks.find(risk => risk.zoneId === zone.zoneId);
@@ -140,6 +141,7 @@ useEffect(() => {
         };
       });
       setZones(riskMappedZones);
+      console.log('nigga : ',zones[0]);
     } catch (error) {
       console.error('Error fetching risk calculation:', error);
     }
@@ -148,7 +150,7 @@ useEffect(() => {
   useEffect(() => {
     const timer = setTimeout(() => {
       fetchRiskCalculation();
-    }, 60000);
+    }, 6000);
     return () => clearTimeout(timer);
   }, [zones]);
 
