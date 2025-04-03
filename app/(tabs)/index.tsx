@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { View, StyleSheet, TouchableOpacity, Text } from 'react-native';
-import axios from 'axios';
+import axios, { all } from 'axios';
 import RBush from 'rbush';
 import booleanPointInPolygon from '@turf/boolean-point-in-polygon';
 import { polygon, point } from '@turf/helpers';
@@ -114,7 +114,7 @@ useEffect(() => {
       
       setAllZones(fetchedZones);
      
-    
+    console.log('Fetched Zones:', allZones.length);
     } catch (error) {
       console.error('Error fetching data:', error);
     }
@@ -124,35 +124,47 @@ useEffect(() => {
 }, []);
 
 // Risk calculation
-  const fetchRiskCalculation = async () => {
-    if(zones.length === 0) return;
-    try {
-      const response = await axios.post(EXPO_PUBLIC_RISK_API, {
-        zone_ids: zones.map((zone) => zone.zoneId),
-      });
-      // console.log(response);
-      const zoneRisks : any[] = response.data.risks;
-      const riskMappedZones = zones.map((zone) => {
-        const matchedRisk = zoneRisks.find(risk => risk.zoneId === zone.zoneId);
-        return {
-          ...zone,
-          currentRisk_car: matchedRisk ? matchedRisk.risk : 'none',
-          currentRisk_pedestrian: matchedRisk ? matchedRisk.risk : 'none',
-        };
-      });
-      setZones(riskMappedZones);
-      console.log('nigga : ',zones[0]);
-    } catch (error) {
-      console.error('Error fetching risk calculation:', error);
-    }
-  };
-// Risk calculation
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchRiskCalculation();
-    }, 6000);
-    return () => clearTimeout(timer);
-  }, [zones]);
+
+const fetchRiskCalculation = useCallback(async () => {
+  if (zones.length === 0) return;
+
+  try {
+    const response = await axios.post(EXPO_PUBLIC_RISK_API, {
+      zone_ids: zones.map((zone) => zone.zoneId),
+    });
+
+    const zoneRisks: any[] = response.data.risks;
+
+    const riskMappedZones = zones.map((zone) => {
+      const matchedRisk = zoneRisks.find((risk) => risk.zoneId === zone.zoneId);
+      return {
+        ...zone,
+        currentRisk_car: matchedRisk ? matchedRisk.risk : "none",
+        currentRisk_pedestrian: matchedRisk ? matchedRisk.risk : "none",
+      };
+    });
+
+    // Only update state if the risks actually changed
+    setZones((prevZones) => {
+      const isDifferent = JSON.stringify(prevZones) !== JSON.stringify(riskMappedZones);
+      return isDifferent ? riskMappedZones : prevZones;
+    });
+
+  } catch (error) {
+    console.error("Error fetching risk calculation:", error);
+  }
+}, [zones]); // Only re-create the function if `zones` change
+
+// Debounced useEffect to reduce unnecessary calls
+useEffect(() => {
+  const timer = setTimeout(() => {
+    fetchRiskCalculation();
+  }, 500); // Adjust debounce delay as needed
+
+  return () => clearTimeout(timer);
+}, [fetchRiskCalculation]); // Effect runs when `fetchRiskCalculation` updates
+
+
 
   // Build R-tree and filter nearby zones
   useEffect(() => {
@@ -173,6 +185,7 @@ useEffect(() => {
     if (currentLoc) {
       const nearbyZones = getNearbyZones(currentLoc, allZones);
       setZones(nearbyZones);
+      console.log('Nearby Zones:', nearbyZones.length);
     
     } else {
       console.log('No current location available for filtering zones');
@@ -230,7 +243,7 @@ useEffect(() => {
     });
     return nearby;
   };
-
+ 
   // Calculate zone centroid
   const getZoneCentroid = (geometry: any): { lat: number; lon: number } => {
     let latSum = 0,
@@ -305,7 +318,7 @@ const handleLocationUpdate = async(location: any) => {
   const currentStatus = (await getCurrentStatus(setStatus, status)) || 'pedestrian';
   console.log("current Status", currentStatus);
 
-  console.log("current Zone", currentZone?.zoneId);
+  
   if (newZone && (!currentZone || newZone.zoneId !== currentZone.zoneId)) {
     console.log('Entering Zone:', newZone.zoneId, newZone.type , currentStatus.toString());
     generateNotification(newZone, user, 'entering',currentStatus.toString());
@@ -316,7 +329,7 @@ const handleLocationUpdate = async(location: any) => {
   }
 
   const nearbyZones = getNearbyZones(location, allZones);
-  setZones(nearbyZones);
+   setZones(nearbyZones);
 };
 
 

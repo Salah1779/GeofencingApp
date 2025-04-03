@@ -1,4 +1,4 @@
-export const IP_BACKEND: string = '192.168.1.8';
+export const IP_BACKEND: string = '192.168.0.104';
 export const EXPO_PUBLIC_BUILDINGS_API: string = `http://${IP_BACKEND}:8080/api/buildings`;
 export const EXPO_PUBLIC_ROUTES_API: string = `http://${IP_BACKEND}:8081/api/routes`;
 export const EXPO_PUBLIC_ZONES_API: string = `http://${IP_BACKEND}:8084/api/zones`;
@@ -7,3 +7,4 @@ export const EXPO_PUBLIC_ASTAR_API: string = `http://${IP_BACKEND}:8090/api/find
 export const EXPO_PUBLIC_NOTIFICATIONS_DISPLAY: string = `http://${IP_BACKEND}:8050/api/notifications`;
 export const EXPO_PUBLIC_NOTIFICATIONS_GENERATE: string = `http://${IP_BACKEND}:8050/api/zone-notification`;
 export const EXPO_PUBLIC_RISK_API: string = `http://${IP_BACKEND}:8001/zone_ids`;
+
