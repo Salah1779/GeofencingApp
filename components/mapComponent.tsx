@@ -20,8 +20,9 @@ import { LocationObject } from 'expo-location';
      // rgba(245, 158, 11, 0.5)
     // rgba(34, 197, 94, 0.5)
 const getRiskColor = (risk : string | undefined): string =>{
-  if(!risk || risk.trim() === ''|| risk===undefined)
-     return randomRiskValue()
+
+  if(!risk || risk.trim() === ''|| risk===undefined){
+     return randomColorValue()}
   if(risk.toLowerCase() === 'élevé'){
     return Colors.riskHighColor;
   }else if(risk === 'moyen'){
@@ -31,10 +32,10 @@ const getRiskColor = (risk : string | undefined): string =>{
   }
 }
 
-const randomRiskValue = () : string=>{
-  const riskValues :string[] = ['faible', 'moyen', 'élevé'];
-  const randomIndex = Math.floor(Math.random() * riskValues.length);
-  return riskValues[randomIndex];
+const randomColorValue = () : string=>{
+  const riskColors :string[] = [Colors.riskHighColor, Colors.riskMidColor, Colors.riskLowColor];
+  const randomIndex = Math.floor(Math.random() * riskColors.length);
+  return riskColors[randomIndex];
 }
 
 
