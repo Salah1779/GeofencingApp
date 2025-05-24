@@ -101,9 +101,11 @@ useEffect(() => {
   zonesRef.current = zones;
 }, [zones]);
 
+//initial fetch
 useEffect(() => {
   const fetchData = async () => {
     try {
+      console.log('Fetching data...', EXPO_PUBLIC_ZONES_API);
       const [zonesRes]= await Promise.all([
        
         axios.get(EXPO_PUBLIC_ZONES_API),
@@ -111,6 +113,7 @@ useEffect(() => {
       ]);
 
       const fetchedZones = zonesRes.data.processedZones;
+      console
       
       setAllZones(fetchedZones);
      
@@ -126,6 +129,7 @@ useEffect(() => {
 // Risk calculation
 
 const fetchRiskCalculation = useCallback(async () => {
+  console.log('Fetching risk calculation...' , EXPO_PUBLIC_RISK_API);
   if (zones.length === 0) return;
 
   try {
@@ -154,15 +158,6 @@ const fetchRiskCalculation = useCallback(async () => {
     console.error("Error fetching risk calculation:", error);
   }
 }, [zones]); // Only re-create the function if `zones` change
-
-// Debounced useEffect to reduce unnecessary calls
-useEffect(() => {
-  const timer = setTimeout(() => {
-    fetchRiskCalculation();
-  }, 500); // Adjust debounce delay as needed
-
-  return () => clearTimeout(timer);
-}, [fetchRiskCalculation]); // Effect runs when `fetchRiskCalculation` updates
 
 
 
@@ -263,10 +258,11 @@ useEffect(() => {
 
 // Generate Notification
   const generateNotification = async (zone: Zone, user : User |null, currentStatus: 'entering' | 'leaving' , activity: string| null) => {
+    console.log('Generating Notification for Zone:', zone.zoneId , 'Current Status:', currentStatus, ' Activity:', activity ," carRisk", zone.currentRisk_car," pedRisk",zone.currentRisk_pedestrian);
     try {
       const response = await axios.post(EXPO_PUBLIC_NOTIFICATIONS_GENERATE, {
          type: zone.type,
-         currentRisk: "Elevee",
+         currentRisk: (!zone.currentRisk_car && !zone.currentRisk_pedestrian) ? 'faible' : activity==='car' ? zone.currentRisk_car : zone.currentRisk_pedestrian,
          status: currentStatus,
          userContext: {
           name: user?.first_name ?? "Mock",
@@ -285,7 +281,7 @@ useEffect(() => {
   };
 
   // Handle location update
-const handleLocationUpdate = async(location: any) => {
+ const handleLocationUpdate = async(location: any) => {
   const now = Date.now();
   if (now - lastCheckTime.current < checkInterval) return;
   lastCheckTime.current = now;
