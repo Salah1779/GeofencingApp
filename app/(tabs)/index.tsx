@@ -73,7 +73,7 @@ const Home: React.FC = () => {
 
 
 
-  useEffect(() => {
+  useEffect(() => {   
     configureNotifications(); 
   }, []);
 
@@ -316,7 +316,8 @@ const fetchRiskCalculation = useCallback(async () => {
 
   
   if (newZone && (!currentZone || newZone.zoneId !== currentZone.zoneId)) {
-    console.log('Entering Zone:', newZone.zoneId, newZone.type , currentStatus.toString());
+    console.log('Entering Zone:', newZone.zoneId,currentZone?.zoneId , newZone.type , currentStatus.toString());
+    setCurrentZone(newZone);
     generateNotification(newZone, user, 'entering',currentStatus.toString());
     
   } else if (!newZone && currentZone) {
