@@ -73,7 +73,7 @@ const Home: React.FC = () => {
 
 
 
-  useEffect(() => {   
+  useEffect(() => {
     configureNotifications(); 
   }, []);
 
@@ -158,6 +158,15 @@ const fetchRiskCalculation = useCallback(async () => {
     console.error("Error fetching risk calculation:", error);
   }
 }, [zones]); // Only re-create the function if `zones` change
+
+// Debounced useEffect to reduce unnecessary calls
+useEffect(() => {
+  const timer = setTimeout(() => {
+    fetchRiskCalculation();
+  }, 500); // Adjust debounce delay as needed
+
+  return () => clearTimeout(timer);
+}, [fetchRiskCalculation]); // Effect runs when `fetchRiskCalculation` updates
 
 
 
@@ -316,7 +325,7 @@ const fetchRiskCalculation = useCallback(async () => {
 
   
   if (newZone && (!currentZone || newZone.zoneId !== currentZone.zoneId)) {
-    console.log('Entering Zone:', newZone.zoneId,currentZone?.zoneId , newZone.type , currentStatus.toString());
+    console.log('Entering Zone:', newZone.zoneId, currentZone?.zoneId, newZone.type , currentStatus.toString());
     setCurrentZone(newZone);
     generateNotification(newZone, user, 'entering',currentStatus.toString());
     

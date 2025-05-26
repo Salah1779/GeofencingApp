@@ -101,9 +101,9 @@ const ProfileScreen = () => {
   // Animation values
   const headerOpacity = scrollY.interpolate({
     inputRange: [0, 100],
-    outputRange: [0, 1],
+    outputRange: [0, 2],
     extrapolate: 'clamp',
-  });
+  })
 
   const imageScale = scrollY.interpolate({
     inputRange: [-100, 0, 100],
@@ -132,7 +132,7 @@ const ProfileScreen = () => {
         <View style={styles.profileHeader}>
           <Animated.View style={[styles.avatarContainer, { transform: [{ scale: imageScale }] }]}>
             <Image
-              source={{ uri: 'https://via.placeholder.com/150' }}
+              source={{ uri: 'https://yourteachingmentor.com/wp-content/uploads/2020/12/istockphoto-1223671392-612x612-1.jpg' }}
               style={[styles.avatar, { width: width * 0.3, height: width * 0.3, borderRadius: width * 0.15 }]}
             />
             <View style={styles.statusBadge}>
@@ -161,13 +161,13 @@ const ProfileScreen = () => {
           <Text style={styles.sectionTitle}>Settings</Text>
           
           {/* Location Toggle */}
-          <CustomSwitch
+          {/* <CustomSwitch
             label="Enable Location"
             value={locationEnabled}
             onValueChange={handleLocationToggle}
             iconName="location"
             IconComponent={Ionicons}
-          />
+          /> */}
           
           {/* Other settings can be added here */} 
          <CustomSwitch
